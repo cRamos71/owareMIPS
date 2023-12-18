@@ -1,49 +1,273 @@
-.data
+	.data
 
-LINHA: .asciiz "__"
-COLUNA: .asciiz "|"
+#Table prints
+LINES: .asciiz "--"
+COLUMNS: .asciiz "|"
+EMPTY: .asciiz "  "
+CONNECTOR: .asciiz "+"
+N: .asciiz "\n"
 
-.text
+#Menu
+MENUSW: .asciiz "Chose one of the options: \n"
+OPTION1: .asciiz "1. Play\n"
+OPTION2: .asciiz "2. Turorial\n"
+OPTION3: .asciiz "3. Quit\n"
+
+
+
+
+	.align 2
+CASASTOP: 	.word	4, 4, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
+CASASBOTTOM: .word	4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
+
+	
+
+	.text
+
 main:
-	jal board
+	
+	#jal menu
+		
+	
+	
+	
+	
+	la $s0, CASASTOP # Top part of the board
+	la $s1, CASASBOTTOM # Bottom part of the board
 
-
+	add $t1, $0, $0
+	jal boardLinesTop
+	add $t1, $0, $0
+	jal boardMid
+	add $t1, $0, $0
+	jal boardLinesBottom
+	
 	addi $v0, $0, 10
 	syscall
 	
-board:
-	addi $sp, $sp, -4
-	sw $ra,  4($sp)
 
-	addi $v0, $0, 4
-	la $a0, COLUNA
+
+menu: 
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+
+	la $a0, MENUSW
+	jal printf
+	la $a0, OPTION1
+	jal printf
+	la $a0, OPTION2
+	jal printf
+	la $a0, OPTION3
+	jal printf
+
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
+printf:
+	add $v0, $0, 4
 	syscall
 	
-	jal printMidSlashes
-	
-	lw $ra, 4($sp)
-	addi $sp, $sp, 4
 	jr $ra
 
 
-printMidSlashes:
-		slti $t0, $t1, 6 # Se o o meu contador for menor que 7, continua porque $t0 é 1 senão salta porque é 0
-		beq $t0, 0, printMidSlashesEnd
-		
-		
-		addi $v0, $0, 4
-		la $a0, LINHA
-		syscall
 
-       		addi $v0, $0, 4
-		la $a0, COLUNA
-		syscall
+
+
+
+# Prints the top lines
+boardLinesTop:
+
+	addi $sp, $sp, -12
+	sw $ra,  0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+
+	addi $v0, $0, 4
+	la $a0, COLUMNS
+	syscall
+	
+	add $s1, $0, $0
+
+	jal printLinesTop
+	
+	lw $ra, 0($sp)
+	lw $s0, 4($sp)
+	lw $s1, 8($sp)
+	addi $sp, $sp, 12
+	
+	jr $ra
+
+
+		printLinesTop:
+				slti $t0, $t1, 6 # Se o o meu contador for menor que 7, continua porque $t0 é 1 senão salta porque é 0
+				beq $t0, 0, printLinesTopEnd
+				
+				lw $s0, 4($sp)
+				
+				sll $t2,  $s1, 2
+				add $t2, $t2, $s0
+				lw $t2, 0($t2)
+				
+				addi $s1, $s1, 1 
+				
+				slti $t0, $t2, 10
+				beq $t0, 1, printOneNumberTop
+				
+				
+				addi $v0, $0, 1
+				add $a0, $0, $t2
+				syscall
 		
-		addi $t1, $t1, 1
+       				addi $v0, $0, 4
+				la $a0, COLUMNS
+				syscall
 		
-     		j printMidSlashes
+				addi $t1, $t1, 1
+		
+     				j printLinesTop
 		
 		
-printMidSlashesEnd:
+				printLinesTopEnd:
+
+						addi $v0, $0, 4
+        						la $a0, N
+       						syscall
+	   	
+						jr $ra
+				
+				printOneNumberTop:
+						
+						addi $v0, $0, 1
+						addi $a0, $0, 0
+						syscall
+						
+						addi $v0, $0, 1
+						add $a0, $0, $t2
+						syscall
+						
+						addi $v0, $0, 4
+						la $a0, COLUMNS
+						syscall
+						
+						addi $t1, $t1, 1
+						
+						j printLinesTop
+						
+						
+
+# Prints the midlines
+boardMid:
+		addi $sp, $sp, -4
+		sw $ra,  0($sp)
+
+		addi $v0, $0,4
+      		la $a0, CONNECTOR
+     		syscall
+     		
+     		jal printLinesMid
+     		
+     		lw $ra, 0($sp)
+		addi $sp, $sp, 4
 	
 		jr $ra
+
+		printLinesMid:
+				slti $t0, $t1, 6 # Se o o meu contador for menor que 7, continua porque $t0 é 1 senão salta porque é 0
+				beq $t0, 0, printLinesMidEnd
+		
+				addi $v0, $0,4
+				la $a0, LINES
+     				syscall
+     		
+     				addi $v0, $0,4
+      				la $a0, CONNECTOR
+     				syscall
+     		
+     				addi $t1, $t1, 1
+     		
+     				j printLinesMid
+		
+				
+				printLinesMidEnd:
+						addi $v0, $0, 4
+        						la $a0, N
+       						syscall
+	   	
+						jr $ra
+
+# Prints the bottom lines
+boardLinesBottom:
+	addi $sp, $sp, -12
+	sw $ra,  0($sp)
+	sw $s0, 4($sp)
+	sw $s1, 8($sp)
+	
+	addi $v0, $0, 4
+	la $a0, COLUMNS
+	syscall
+	
+	add $s0, $0, $0
+	jal printLinesBottom
+	
+	lw $ra,  0($sp)
+	lw $s0, 4($sp)
+	lw $s1, 8($sp)
+	addi $sp, $sp, 12
+	
+	jr $ra
+	
+		printLinesBottom:
+				slti $t0, $t1, 6 # Se o o meu contador for menor que 7, continua porque $t0 é 1 senão salta porque é 0
+				beq $t0, 0, printLinesBottomEnd
+				
+				lw $s1, 8($sp)
+				
+				sll $t2,  $s0, 2
+				add $t2, $t2, $s1
+				lw $t2, 0($t2)
+				
+				addi $s0, $s0, 1 
+				
+				slti $t0, $t2, 10
+				beq $t0, 1, printOneNumberBottom
+				
+				
+				addi $v0, $0, 1
+				add $a0, $0, $t2
+				syscall
+		
+       				addi $v0, $0, 4
+				la $a0, COLUMNS
+				syscall
+		
+				addi $t1, $t1, 1
+		
+     				j printLinesBottom
+     				
+     				printLinesBottomEnd:
+     						
+						addi $v0, $0, 4
+        						la $a0, N
+       						syscall
+	   	
+						jr $ra
+				
+				printOneNumberBottom:
+				
+						addi $v0, $0, 1
+						addi $a0, $0, 0
+						syscall
+						
+						addi $v0, $0, 1
+						add $a0, $0, $t2
+						syscall
+						
+						addi $v0, $0, 4
+						la $a0, COLUMNS
+						syscall
+						
+						addi $t1, $t1, 1
+						
+						j printLinesBottom
+						
