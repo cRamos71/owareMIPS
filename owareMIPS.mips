@@ -35,12 +35,17 @@ main:
 	la $s0, CASASTOP # Top part of the board
 	la $s1, CASASBOTTOM # Bottom part of the board
 
-	add $t1, $0, $0
+	jal boardNumbersTop
+
+
+	add $t1, $0, $0 # passar para dentro
 	jal boardLinesTop
 	add $t1, $0, $0
 	jal boardMid
 	add $t1, $0, $0
 	jal boardLinesBottom
+	
+	jal boardNumbersBottom
 	
 	addi $v0, $0, 10
 	syscall
@@ -72,7 +77,79 @@ printf:
 
 
 
+#Prints the boardBottom house numbers
+boardNumbersBottom:
+		addi $sp, $sp, -8
+		sw $s0, 0($sp)
+		sw $ra, 4($sp)
 
+		la $a0, EMPTY
+		jal printf
+
+		addi $s0, $0, 1
+		LoopPrint1:
+			slti $t1, $s0, 7
+			beq $t1, 0, NumbersBottomEnd
+			
+			add $a0, $s0, $0
+			
+			add $v0, $0, 1
+			syscall
+			
+			la $a0, EMPTY
+			jal printf
+			
+			addi $s0, $s0, 1
+			
+			j LoopPrint1
+
+		NumbersBottomEnd:
+			
+			la $a0, N
+			jal printf
+			
+			lw $s0, 0($sp)
+			lw $ra, 4($sp)
+			addi $sp, $sp, 8
+			jr $ra
+
+
+#Prints the boardTop house numbers
+boardNumbersTop:
+		addi $sp, $sp, -8
+		sw $s0, 0($sp)
+		sw $ra, 4($sp)
+		
+		la $a0, EMPTY
+		jal printf
+		
+		addi $s0, $0, 6
+		LoopPrint0:
+			slti $t1, $s0, 1
+			beq $t1, 1, NumbersTopEnd
+			
+			add $a0, $s0, $0
+			
+			add $v0, $0, 1
+			syscall
+			
+			la $a0, EMPTY
+			jal printf
+			
+			addi $s0, $s0, -1
+			
+			j LoopPrint0
+		
+		NumbersTopEnd:
+		
+			la $a0, N
+			jal printf
+			
+			lw $s0, 0($sp)
+			lw $ra, 4($sp)
+			addi $sp, $sp, 8
+			jr $ra
+		
 
 
 # Prints the top lines
@@ -155,7 +232,6 @@ boardLinesTop:
 						j printLinesTop
 						
 						
-
 # Prints the midlines
 boardMid:
 		addi $sp, $sp, -4
@@ -195,6 +271,7 @@ boardMid:
        						syscall
 	   	
 						jr $ra
+
 
 # Prints the bottom lines
 boardLinesBottom:
