@@ -1,0 +1,49 @@
+.data
+
+LINHA: .asciiz "__"
+COLUNA: .asciiz "|"
+
+.text
+main:
+	jal board
+
+
+	addi $v0, $0, 10
+	syscall
+	
+board:
+	addi $sp, $sp, -4
+	sw $ra,  4($sp)
+
+	addi $v0, $0, 4
+	la $a0, COLUNA
+	syscall
+	
+	jal printMidSlashes
+	
+	lw $ra, 4($sp)
+	addi $sp, $sp, 4
+	jr $ra
+
+
+printMidSlashes:
+		slti $t0, $t1, 6 # Se o o meu contador for menor que 7, continua porque $t0 é 1 senão salta porque é 0
+		beq $t0, 0, printMidSlashesEnd
+		
+		
+		addi $v0, $0, 4
+		la $a0, LINHA
+		syscall
+
+       		addi $v0, $0, 4
+		la $a0, COLUNA
+		syscall
+		
+		addi $t1, $t1, 1
+		
+     		j printMidSlashes
+		
+		
+printMidSlashesEnd:
+	
+		jr $ra
