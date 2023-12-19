@@ -13,7 +13,10 @@ OPTION1: .asciiz "1. Play\n"
 OPTION2: .asciiz "2. Turorial\n"
 OPTION3: .asciiz "3. Quit\n"
 
+TEST: .asciiz "TEST"
 
+player1: .space 30
+player2: .space 30
 
 
 	.align 2
@@ -51,12 +54,45 @@ eventHandlerMenu:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
+	read:
+		addi $v0, $0, 5
+		syscall
+	
+	default:
+		slt  $t1, $v0, $s0
+		beq $t1, $0, read
+		
+		slti  $t1, $v0, 3
+		beq $t1, $0, read
+	
+	case1: #Play
+		addi $t2, $0, 1
+		slti  $t1, $v0, 1 
+		beq $t1, $t2, case2
+		
+		la $a0, TEST
+		jal printf
+		
+		#jal play
+		
+	case2: #Tutorial
+		add $t2, $0, 1
+		slti  $t1, $v0, 1 
+		beq $t1, $t2, case2
+		
+		la $a0, OPTION1
+		jal printf
+		
+	case3:#Quit
+	
+	
 	
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	jr $ra
 	
 	
+
 menu: 
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
