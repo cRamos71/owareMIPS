@@ -14,6 +14,10 @@ OPTION2: .asciiz "2. Turorial\n"
 OPTION3: .asciiz "3. Quit\n"
 
 TEST: .asciiz "TEST"
+TEST: .asciiz "TEST"
+TUTORIAL: .asciiz "The goal of Oware is to capture more seeds (game pieces) than your opponent.\n"
+TUTORIAL1: .asciiz "The game consists of two players, each controlling a row of six pits (small holes) on their side of the board, and the seeds are distributed evenly among these pits."
+QUIT: .asciiz "Leaving game!"
 
 player1: .space 30
 player2: .space 30
@@ -53,40 +57,67 @@ main:
 eventHandlerMenu:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
+	readOption:
+		
+		addi $v0, $0, 5
+		syscall
+		
+		j default
+		
+	readOptionFail:
 	
-	read:
+		la $a0, INVALIDOPTION
+		jal printf
+		la $a0, CHOSEN
+		jal printf
+		
 		addi $v0, $0, 5
 		syscall
 	
+	
 	default:
-		slt  $t1, $v0, $s0
-		beq $t1, $0, read
-		
-		slti  $t1, $v0, 3
-		beq $t1, $0, read
 	
-	case1: #Play
 		addi $t2, $0, 1
-		slti  $t1, $v0, 1 
-		beq $t1, $t2, case2
+		slti  $t1, $v0, 0
+		beq $t1, $t2, readOptionFail
 		
-		la $a0, TEST
+		
+		slti  $t1, $v0, 4
+		beq $t1, $0, readOptionFail
+	
+	
+	case1: 
+		#Play
+		slti  $t1, $v0, 2
+		beq $t1, $0, case2
+		
+		la $a0, TEST # print test 
 		jal printf
 		
-		#jal play
+		jal play
 		
-	case2: #Tutorial
-		add $t2, $0, 1
-		slti  $t1, $v0, 1 
-		beq $t1, $t2, case2
+		j HandleMenuEnd
 		
-		la $a0, OPTION1
+	case2: 
+		#Tutorial
+		slti  $t1, $v0, 3
+		beq $t1, $0, case3
+		
+		la $a0, TUTORIAL
+		jal printf
+		la $a0, TUTORIAL1
 		jal printf
 		
-	case3:#Quit
+		j HandlerMenuEnd
+		
+	case3:
+		#Quit
+		#Empty, goes down.
+		
+		
 	
 	
-	
+	HandlerMenuEnd:
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	jr $ra
