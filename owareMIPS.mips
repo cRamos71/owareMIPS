@@ -26,33 +26,51 @@ CASASBOTTOM: .word	4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need t
 
 main:
 	
-	#jal menu
-		
-	
-	
-	
-	
 	la $s0, CASASTOP # Top part of the board
 	la $s1, CASASBOTTOM # Bottom part of the board
 
-	jal boardNumbersTop
-
-
-	add $t1, $0, $0 # passar para dentro
-	jal boardLinesTop
-	add $t1, $0, $0
-	jal boardMid
-	add $t1, $0, $0
-	jal boardLinesBottom
 	
-	jal boardNumbersBottom
+	jal menu
+	
+	jal eventHandlerMenu
+	
+	jal printBoard	
+	
+	
+	
+	
+	
+
 	
 	addi $v0, $0, 10
 	syscall
 	
 
 
+eventHandlerMenu:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
+	
 menu: 
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	jal printMenu
+	
+	
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
+	
+printMenu:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 
@@ -75,6 +93,22 @@ printf:
 	
 	jr $ra
 
+
+
+printBoard:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	jal boardNumbersTop
+	jal boardLinesTop
+	jal boardMid
+	jal boardLinesBottom
+	jal boardNumbersBottom
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
 
 
 #Prints the boardBottom house numbers
@@ -154,7 +188,7 @@ boardNumbersTop:
 
 # Prints the top lines
 boardLinesTop:
-
+    add $t1, $0, $0
 	addi $sp, $sp, -12
 	sw $ra,  0($sp)
 	sw $s0, 4($sp)
@@ -234,6 +268,7 @@ boardLinesTop:
 						
 # Prints the midlines
 boardMid:
+        add $t1, $0, $0
 		addi $sp, $sp, -4
 		sw $ra,  0($sp)
 
@@ -275,6 +310,7 @@ boardMid:
 
 # Prints the bottom lines
 boardLinesBottom:
+    add $t1, $0, $0
 	addi $sp, $sp, -12
 	sw $ra,  0($sp)
 	sw $s0, 4($sp)
