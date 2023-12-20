@@ -4,6 +4,7 @@
 LINES: .asciiz "--"
 COLUMNS: .asciiz "|"
 EMPTY: .asciiz "  "
+EMPTY1: .asciiz " "
 CONNECTOR: .asciiz "+"
 N: .asciiz "\n"
 
@@ -12,36 +13,53 @@ MENUSW: .asciiz "Chose one of the options: \n"
 OPTION1: .asciiz "1. Play\n"
 OPTION2: .asciiz "2. Turorial\n"
 OPTION3: .asciiz "3. Quit\n"
+INVALIDOPTION: .asciiz "\nChose an valid option "
+CHOSEN: .asciiz "=>"
+
+#PlayerNames
+PLAYERNAME: .asciiz "Insert player names\n"
+PLAYERNAME1: .asciiz "Player 1 => "
+PLAYERNAME2: .asciiz "Player 2 => "
+
+
+#GamePlay
+CHOSESIDE: .asciiz "Chose a side: \n1.Top\n2.Bottom\n"
+CHOSESIDEP: .asciiz "Player 1 must chose=> "
+
 
 TEST: .asciiz "TEST"
-TEST: .asciiz "TEST"
-TUTORIAL: .asciiz "The goal of Oware is to capture more seeds (game pieces) than your opponent.\n"
-TUTORIAL1: .asciiz "The game consists of two players, each controlling a row of six pits (small holes) on their side of the board, and the seeds are distributed evenly among these pits."
+
+#Tutorial
+TUTORIAL: .asciiz "The goal of Oware is to capture more seeds (game pieces) than your opponent.\nThe game consists of two players, each controlling a row of six pits (small holes) on\ntheir side of the board, and the seeds are distributed evenly among these pits.\n\n"
+
+
+#Quit
 QUIT: .asciiz "Leaving game!"
 
-player1: .space 30
-player2: .space 30
+player1: .space 20
+player2: .space 20
 
 
 	.align 2
-CASASTOP: 	.word	4, 4, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
-CASASBOTTOM: .word	4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
+CASASTOP: 	.word		4, 4, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
+CASASBOTTOM: .word		4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
 
 	
 
 	.text
 
 main:
-	
+		
 	la $s0, CASASTOP # Top part of the board
 	la $s1, CASASBOTTOM # Bottom part of the board
 
+	run:
 	
 	jal menu
 	
 	jal eventHandlerMenu
 	
-	jal printBoard	
+	#jal printBoard	
 	
 	
 	
@@ -57,6 +75,7 @@ main:
 eventHandlerMenu:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
+	
 	readOption:
 		
 		addi $v0, $0, 5
@@ -81,36 +100,49 @@ eventHandlerMenu:
 		slti  $t1, $v0, 0
 		beq $t1, $t2, readOptionFail
 		
-		
+
 		slti  $t1, $v0, 4
 		beq $t1, $0, readOptionFail
 	
 	
-	case1: 
-		#Play
+	case1: #Play
 		slti  $t1, $v0, 2
 		beq $t1, $0, case2
 		
-		la $a0, TEST # print test 
+		add $t1, $0, $0
+		jal clear
+		
+		la $a0, PLAYERNAME
 		jal printf
 		
-		jal play
+		jal ReadPlayerNames
 		
-		j HandleMenuEnd
+
+		jal PlayGame
 		
-	case2: 
-		#Tutorial
+		j HandlerMenuEnd
+		
+	case2: #Tutorial
 		slti  $t1, $v0, 3
 		beq $t1, $0, case3
 		
+		add $t1, $0, $0
+		jal clear
+		
 		la $a0, TUTORIAL
 		jal printf
-		la $a0, TUTORIAL1
-		jal printf
+		
+		jal menu
+		jal eventHandlerMenu
 		
 		j HandlerMenuEnd
 		
 	case3:
+		add $t1, $0, $0
+		jal clear
+		
+		la $a0, QUIT
+		jal printf
 		#Quit
 		#Empty, goes down.
 		
@@ -123,14 +155,81 @@ eventHandlerMenu:
 	jr $ra
 	
 	
+ReadPlayerNames:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	la $a0, PLAYERNAME1
+	jal printf
+	
+	addi $v0, $0, 8
+	la $a0, player1
+	addi $a1, $0,  19 # has to be -1 that the name according to documentation. \n
+	syscall
+	
+	la $a0, PLAYERNAME2
+	jal printf
+	
+	addi $v0, $0, 8
+	la $a0, player2
+	addi $a1, $0,  19 # has to be -1 that the name according to documentation. \n
+	syscall
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
 
+
+
+
+#Game
+PlayGame:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	jal printBoard	
+	jal choseSide
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	
+	jr $ra
+	
+#Prints
+choseSide:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	la $a0, CHOSESIDE
+	jal printf
+	la $a0, CHOSESIDEP
+	jal printf
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	
+	jr $ra
+
+clear:
+	#Clears table
+	beq $t1, 50, clearEnd
+	
+	add $v0, $0, 4
+	la $a0, N
+	syscall
+	
+	addi $t1, $t1, 1
+	
+	j clear
+	
+clearEnd:
+	jr $ra
+	
 menu: 
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
 	jal printMenu
-	
-	
 	
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
@@ -251,15 +350,16 @@ boardNumbersTop:
 			addi $sp, $sp, 8
 			jr $ra
 		
-
-
 # Prints the top lines
 boardLinesTop:
-    add $t1, $0, $0
+	add $t1, $0, $0
 	addi $sp, $sp, -12
 	sw $ra,  0($sp)
 	sw $s0, 4($sp)
 	sw $s1, 8($sp)
+	
+	la $a0, EMPTY
+	jal printf
 
 	addi $v0, $0, 4
 	la $a0, COLUMNS
@@ -307,7 +407,7 @@ boardLinesTop:
 		
 		
 				printLinesTopEnd:
-
+						
 						addi $v0, $0, 4
         						la $a0, N
        						syscall
@@ -333,17 +433,31 @@ boardLinesTop:
 						j printLinesTop
 						
 						
+
+
+
 # Prints the midlines
 boardMid:
-        add $t1, $0, $0
+		add $t1, $0, $0
 		addi $sp, $sp, -4
 		sw $ra,  0($sp)
+
+
+		lw $t2,  24($s1)
+						
+		addi $v0, $0, 1
+        		add $a0, $t2, $0
+       		syscall
+
+		la $a0, EMPTY1
+		jal printf
 
 		addi $v0, $0,4
       		la $a0, CONNECTOR
      		syscall
      		
      		jal printLinesMid
+     	
      		
      		lw $ra, 0($sp)
 		addi $sp, $sp, 4
@@ -368,20 +482,33 @@ boardMid:
 		
 				
 				printLinesMidEnd:
+						
+						addi $v0, $0, 4
+						la $a0, EMPTY1
+						syscall
+				
+       						lw $t2,  24($s1)
+						
+						addi $v0, $0, 1
+        						add $a0, $t2, $0
+       						syscall
+       						
 						addi $v0, $0, 4
         						la $a0, N
        						syscall
 	   	
 						jr $ra
 
-
 # Prints the bottom lines
 boardLinesBottom:
-    add $t1, $0, $0
+	add $t1, $0, $0
 	addi $sp, $sp, -12
 	sw $ra,  0($sp)
 	sw $s0, 4($sp)
 	sw $s1, 8($sp)
+	
+	la $a0, EMPTY
+	jal printf
 	
 	addi $v0, $0, 4
 	la $a0, COLUMNS
