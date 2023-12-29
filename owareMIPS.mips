@@ -280,7 +280,7 @@ playerMove: #Player move
 		la $a0, CHOOSEHOUSE
 		jal printf
 		
-		 jumpReadMove1:
+		jumpReadMove1:
 		jal readMove
 		add $s4, $v0, $0
 		
@@ -855,15 +855,22 @@ emptyHouse: #verify if the selected house is empty
 	jr $ra
 	
 	
-moveMakerBottom:
+moveMaker:
 	addi $sp, $sp, -16
 	sw $ra, 0($sp)
 	sw $s3, 4($sp)
 	sw $s4, 8($sp)
 	sw $s5, 12($sp)
 	
-	la $t0, 0($s1)
+	beq $a1, 0, topArray
 	
+	la $t0, 0($s1)
+	j initSeeding
+	
+	topArray:
+		la $t0, 0($s0)
+
+	initSeeding:
 	addi $a0, $a0, -1
 	sll $t1, $a0, 2
 	add $t0, $t0, $t1
@@ -874,9 +881,11 @@ moveMakerBottom:
 	
 	sll $s4,  $a0, 2
 	
-	plantSeedsBottom:
+	beq $a1, 0, switchPlantSide
+
+	plantSeeds:
 		beq $s3, $0, endPlant
-		beq $s4, 20, switchPlantSideFilterBottom
+		beq $s4, 20, switchPlantSideFilter
 		
 		la $s5, 0($s1)
 		
@@ -889,14 +898,14 @@ moveMakerBottom:
 		
 		addi $s3, $s3, -1
 		
-		j plantSeedsBottom
+		j plantSeeds
 	
-	switchPlantSideFilterBottom:
+	switchPlantSideFilter:
 		addi $s4, $0, 24
 		
-	switchPlantSideBottom:	
+	switchPlantSide:	
 		beq $s3, $0, endPlant
-		beq $s4, 0 , reswitchPlantSideBottom
+		beq $s4, 0 , reswitchPlantSide
 		
 		la $s5, 0($s0)
 		
@@ -909,11 +918,11 @@ moveMakerBottom:
 		
 		addi $s3, $s3, -1
 		
-		j switchPlantSideBottom
+		j switchPlantSide
 	
-	reswitchPlantSideBottom:
+	reswitchPlantSide:
 		addi $s4, $0, -4
-		j plantSeedsBottom
+		j plantSeeds
 	
 	endPlant:
 	
