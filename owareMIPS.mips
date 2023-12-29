@@ -9,12 +9,12 @@ CONNECTOR: .asciiz "+"
 N: .asciiz "\n"
 
 #Menu
-MENUSW: .asciiz "Chose one of the options: \n"
+MENUSW: .asciiz "Choose one of the options: \n"
 OPTION1: .asciiz "1. Play\n"
 OPTION2: .asciiz "2. Turorial\n"
 OPTION3: .asciiz "3. Quit\n"
-INVALIDOPTION: .asciiz "\nChose an valid option "
-CHOSEN: .asciiz "=>"
+INVALIDOPTION: .asciiz "\nChoose an valid option "
+CHOOSEN: .asciiz "=>"
 
 #PlayerNames
 PLAYERNAME: .asciiz "Insert player names\n"
@@ -23,10 +23,13 @@ PLAYERNAME2: .asciiz "Player 2 => "
 
 
 #GamePlay
-CHOSESIDE: .asciiz "Chose a side: \n1.Top\n2.Bottom\n"
-CHOSESIDEP: .asciiz "Player 1 must chose=> "
+CHOOSESIDE: .asciiz "\nChoose a side "
+CHOOSESIDEOP: .asciiz "0.Top\n1.Bottom\n"
 
-
+#PlayPrints
+CHOOSEHOUSE: .asciiz "choose a house => "
+GAMEEND: .asciiz "Game Finished"
+EMPTYHOUSE: .asciiz "The selected house is empty!\n"
 TEST: .asciiz "TEST"
 
 #Tutorial
@@ -41,15 +44,15 @@ player2: .space 20
 
 
 	.align 2
-CASASTOP: 	.word		4, 4, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
-CASASBOTTOM: .word		4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
+CASASTOP: 	.word		4, 0, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
+CASASBOTTOM: .word		4, 0, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
 
 	
 
 	.text
 
 main:
-		
+	add $s7, $0, $0 # Manipulate when playing
 	la $s0, CASASTOP # Top part of the board
 	la $s1, CASASBOTTOM # Bottom part of the board
 
@@ -87,12 +90,11 @@ eventHandlerMenu:
 	
 		la $a0, INVALIDOPTION
 		jal printf
-		la $a0, CHOSEN
+		la $a0, CHOOSEN
 		jal printf
 		
 		addi $v0, $0, 5
 		syscall
-	
 	
 	default:
 	
@@ -116,8 +118,7 @@ eventHandlerMenu:
 		jal printf
 		
 		jal ReadPlayerNames
-		
-
+		jal clear
 		jal PlayGame
 		
 		j HandlerMenuEnd
@@ -187,27 +188,197 @@ PlayGame:
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
-	jal printBoard	
-	jal choseSide
+	
+	jal eventHandlerSide #Chooses player one side, if 1 top/s0 else bottom/s1   S7 updated
+	
+	jal start
+	
+	
 	
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	
 	jr $ra
 	
-#Prints
-choseSide:
+	
+
+start: #Game loop
 	addi $sp, $sp, -4
 	sw $ra, 0($sp)
 	
-	la $a0, CHOSESIDE
-	jal printf
-	la $a0, CHOSESIDEP
-	jal printf
+	startGame:
+		beq $s7, 3, gameFinished
+		
+		jal printBoard
+		
+		add $a0, $s7, $0
+		jal playerMove #player move, print board after
+
+
+
+		j startGame
+
+	gameFinished:
+		 
+		la $a0, GAMEEND
+		jal printf
+		
+		lw $ra, 0($sp)
+		addi $sp, $sp, 4
+	
+		jr $ra
+	
+			
+playerMove: #Player move
+	addi $sp, $sp, -12
+	sw $ra, 0($sp)
+	sw $s3, 4($sp)
+	sw $s4, 8($sp)
+	
+	add $s3, $a0, $0
+	
+	beq $s3, 0, moveTop
+	
+	moveBottom: # $s7 - 1
+		
+		la $a0, player1
+		addi $v0, $0, 4
+		syscall
+	
+		la $a0, CHOOSEHOUSE
+		jal printf
+		
+		jumpReadMove:
+		jal readMove # 1-6 checker
+		add $s4, $v0, $0
+		
+		add $a0, $v0, $0
+		add $a1, $s3, $0
+		jal emptyHouse # if the choosen house is empty, $v0 is 1
+		
+		beq $v0, 1, jumpReadMove
+		
+		add $a0, $s4, $0
+		jal moveMakerBottom
+		
+		
+		#v0 recives
+		
+		#logic
+		
+		add $s7, $0, $0 #check if anyone wins before this
+		
+		
+		j moveEnd
+		
+	moveTop: # $s7 - 0
+	
+		la $a0, player2
+		addi $v0, $0, 4
+		syscall
+		
+		la $a0, CHOOSEHOUSE
+		jal printf
+		
+		 jumpReadMove1:
+		jal readMove
+		add $s4, $v0, $0
+		
+		add $a0, $v0, $0
+		add $a1, $s3, $0
+		jal emptyHouse
+		
+		beq $v0, 1, jumpReadMove1
+		
+		add $a0, $s4, $0
+		#jal moveMakerTop
+		
+		#logic
+		
+		addi $s7, $0, 1 #check if anyone wins before this
+		
+	moveEnd:
+	
+	lw $s4, 8($sp)
+	lw $s3, 4($sp)
+	lw $ra, 0($sp)
+	addi $sp, $sp, 8
+	jr $ra
+
+
+
+eventHandlerSide: #Choosing Side
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	readSide:
+	
+		jal chooseSide
+		
+		addi $v0, $0, 5
+		syscall
+		
+		j defaultSide
+	
+	readSideFail:
+		
+		la $a0, INVALIDOPTION
+		jal printf
+		la $a0, CHOOSEN
+		jal printf
+		
+		addi $v0, $0, 5
+		syscall
+	
+	defaultSide:
+	
+		addi $t2, $0, 1
+		slti  $t1, $v0, 0
+		beq $t1, $t2, readSideFail
+		
+
+		slti  $t1, $v0, 2
+		beq $t1, $0, readSideFail
+	
+	side1: #Enters if Top, $s7 becomes 0
+		slti  $t1, $v0, 1
+		beq $t1, $0, side2
+		
+		add $s7, $0, $0
+	
+		j sideEnd
+		
+	side2: #Enters if Bottom, $s7 becomes 1
+		addi $s7, $0, 1
+	
+	sideEnd:
 	
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
+	jr $ra
 	
+	
+#Prints
+chooseSide:
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	la $a0, CHOOSESIDE
+	jal printf
+	
+	la $a0, player1
+	addi $v0, $0, 4
+	syscall
+	
+	la $a0, CHOOSESIDEOP
+	jal printf
+	
+	la $a0, CHOOSEN
+	jal printf
+	
+	
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
 	jr $ra
 
 clear:
@@ -258,7 +429,6 @@ printf:
 	syscall
 	
 	jr $ra
-
 
 
 printBoard:
@@ -323,10 +493,10 @@ boardNumbersTop:
 		la $a0, EMPTY
 		jal printf
 		
-		addi $s0, $0, 6
+		addi $s0, $0, 1
 		LoopPrint0:
-			slti $t1, $s0, 1
-			beq $t1, 1, NumbersTopEnd
+			slti $t1, $s0, 7
+			beq $t1, 0, NumbersTopEnd
 			
 			add $a0, $s0, $0
 			
@@ -336,7 +506,7 @@ boardNumbersTop:
 			la $a0, EMPTY
 			jal printf
 			
-			addi $s0, $s0, -1
+			addi $s0, $s0, 1
 			
 			j LoopPrint0
 		
@@ -578,3 +748,190 @@ boardLinesBottom:
 						
 						j printLinesBottom
 						
+#Game logic, from this line on
+
+readMove: # Called in 248
+	addi $sp, $sp, -8
+	sw $ra, 0($sp)
+	sw $s3, 4($sp)
+	
+	readHouse:
+
+		addi $v0, $0, 5
+		syscall
+		
+		add $s3, $v0, $0
+		
+		j defaultHouse
+	
+	readHouseFail:
+		
+		la $a0, INVALIDOPTION
+		jal printf
+		la $a0, CHOOSEN
+		jal printf
+		
+		addi $v0, $0, 5
+		syscall
+	
+		add $s3, $v0, $0
+	
+	defaultHouse:
+	
+		addi $t2, $0, 1
+		slti  $t1, $v0, 1
+		beq $t1, $t2, readHouseFail
+		
+
+		slti  $t1, $v0, 7
+		beq $t1, $0, readHouseFail
+		
+	#If it gets here, we are sucessfuly filtered between 1-6
+	
+	
+	la $a0, N
+	jal printf
+	
+	add $v0, $s3, $0
+	
+	lw $s3, 4($sp)
+	lw $ra, 0($sp)
+	addi $sp, $sp, 8
+	jr $ra
+		
+	
+emptyHouse: #verify if the selected house is empty
+	addi $sp, $sp, -4
+	sw $ra, 0($sp)
+	
+	addi $a0, $a0, -1
+	sll $t0, $a0, 2
+	 # $t0, offset of the chosen house
+		
+		
+	beq $a1, 1, bottomEmptyHouse
+	
+	# $s7 - 0 top
+	
+	la $t1, 0($s0) #top array
+	add $t1, $t1, $t0 # moving the offset
+	
+	lw $t0, 0($t1)
+	
+	beq $t0, 0, emptyHouseFound
+	
+	
+	add $v0, $0, $0 # return 0 if it has something
+	
+	j emptyHouseEnd
+	
+	
+	bottomEmptyHouse:  # $s7 - 1 bottom
+	
+		la $t1, 0($s1)
+		add $t1, $t1, $t0 # moving the offset
+		
+		lw $t0, 0($t1)
+		
+		beq $t0, 0, emptyHouseFound
+	
+		add $v0, $0, $0 # return 0 if it has something
+	
+		j emptyHouseEnd
+	
+	emptyHouseFound:
+	
+		la $a0, EMPTYHOUSE
+		jal printf
+		la $a0, INVALIDOPTION
+		jal printf
+		la $a0, CHOOSEN
+		jal printf
+		addi $v0, $0, 1 # return 1 if it is empty
+	
+	emptyHouseEnd:
+	lw $ra, 0($sp)
+	addi $sp, $sp, 4
+	jr $ra
+	
+	
+moveMakerBottom:
+	addi $sp, $sp, -16
+	sw $ra, 0($sp)
+	sw $s3, 4($sp)
+	sw $s4, 8($sp)
+	sw $s5, 12($sp)
+	
+	la $t0, 0($s1)
+	
+	addi $a0, $a0, -1
+	sll $t1, $a0, 2
+	add $t0, $t0, $t1
+	lw $s3, 0($t0) # $s3 has the ammount of seeds in that house
+	
+	add $s4, $0, $0
+	sw $s4, 0($t0) # reset chosen house
+	
+	sll $s4,  $a0, 2
+	
+	plantSeedsBottom:
+		beq $s3, $0, endPlant
+		beq $s4, 20, switchPlantSideFilterBottom
+		
+		la $s5, 0($s1)
+		
+		addi $s4,  $s4, 4
+		add $t2, $s4, $s5 #Now im in the current pos
+		lw $t1, 0($t2)
+		
+		addi $t1, $t1, 1
+		sw $t1, 0($t2) #Updated
+		
+		addi $s3, $s3, -1
+		
+		j plantSeedsBottom
+	
+	switchPlantSideFilterBottom:
+		addi $s4, $0, 24
+		
+	switchPlantSideBottom:	
+		beq $s3, $0, endPlant
+		beq $s4, 0 , reswitchPlantSideBottom
+		
+		la $s5, 0($s0)
+		
+		addi $s4, $s4, -4
+		add $t2, $s4, $s5
+		lw $t1, 0($t2)
+		
+		addi $t1, $t1, 1 #Updated
+		sw $t1, 0($t2)
+		
+		addi $s3, $s3, -1
+		
+		j switchPlantSideBottom
+	
+	reswitchPlantSideBottom:
+		addi $s4, $0, -4
+		j plantSeedsBottom
+	
+	endPlant:
+	
+	lw $s5, 12($sp)
+	lw $s4, 8($sp)
+	lw $s3, 4($sp)
+	lw $ra, 0($sp)
+	addi $sp, $sp, 16
+	jr $ra	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
