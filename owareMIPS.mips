@@ -259,7 +259,8 @@ playerMove: #Player move
 		beq $v0, 1, jumpReadMove
 		
 		add $a0, $s4, $0
-		jal moveMakerBottom
+		addi $a1, $0, 1
+		jal moveMaker
 		
 		
 		#v0 recives
@@ -291,7 +292,8 @@ playerMove: #Player move
 		beq $v0, 1, jumpReadMove1
 		
 		add $a0, $s4, $0
-		#jal moveMakerTop
+		add $a1, $0, $0
+		jal moveMaker
 		
 		#logic
 		
