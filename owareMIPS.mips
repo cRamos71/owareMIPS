@@ -32,6 +32,7 @@ GAMEEND: .asciiz "Game Finished\n"
 EMPTYHOUSE: .asciiz "The selected house is empty!\n"
 PLAYERWON: .asciiz "Winner: "
 PLAYERDRAW: .asciiz "Draw\n"
+CHOSENHOUSE: .asciiz "Last chosen house: "
 TEST: .asciiz "TEST"
 
 #Tutorial
@@ -46,8 +47,8 @@ player2: .space 20
 
 
 	.align 2
-CASASTOP: 	.word		4, 4, 2, 1, 1, 1, 2  #Careful with the first element, i need to verify if im in the first so i jump over that one
-CASASBOTTOM: .word		4, 4, 4, 4, 4, 2, 20  #Careful with the last element, i need to verify if im in the last so i jump over that one
+CASASTOP: 	.word		4, 4, 4, 4, 4, 4, 0   #Careful with the first element, i need to verify if im in the first so i jump over that one
+CASASBOTTOM: .word		4, 4, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
 
 	
 
@@ -211,6 +212,16 @@ start: #Game loop
 		
 		jal clear
 		
+		
+		la $a0, CHOSENHOUSE
+		jal printf
+		addi $v0, $0, 1
+		add $a0, $s6, $0
+		syscall
+		la $a0, N
+		jal printf
+		
+		
 		jal printBoard
 		
 		add $a0, $s7, $0
@@ -287,6 +298,7 @@ playerMove: #Player move
 		jumpReadMove:
 		jal readMove # 1-6 checker
 		add $s4, $v0, $0 # chosen house
+		add $s6, $s4, $0
 		
 		add $a0, $v0, $0 # sending chosen house to check
 		add $a1, $s3, $0 # sending 1, used to check correct vector
@@ -329,12 +341,14 @@ playerMove: #Player move
 		 jumpReadMove1:
 		jal readMove
 		add $s4, $v0, $0 # chosen house
+		add $s6, $s4, $0
 		
 		add $a0, $v0, $0 # sending chosen house
 		add $a1, $s3, $0 # sending 0, used to check correct vector
 		jal emptyHouse
 		
 		beq $v0, 1, jumpReadMove1 # house was empty
+		
 		
 		add $a0, $s4, $0  
 		addi $a1, $0, 0 # starting in top
@@ -408,15 +422,25 @@ eventHandlerSide: #Choosing Side
 	
 	side1: #Enters if Top, $s7 becomes 0
 		slti  $t1, $v0, 1
-		beq $t1, $0, side2
+		beq $v0, $0, side2
 		
-		add $s7, $0, $0
+		addi $s7, $0, 1
 	
 		j sideEnd
 		
 	side2: #Enters if Bottom, $s7 becomes 1
-		addi $s7, $0, 1
+		addi $s7, $0, 0
+		
+	sideUpdateEnd:
 	
+		la $a0, player1
+    		la $a1, player2
+    		
+    		jal swapPlayerNames
+    		
+    		la $a0, player1
+    		jal printf
+		
 	sideEnd:
 	
 	lw $ra, 0($sp)
@@ -1170,4 +1194,26 @@ checkWin:
 	
 	jr $ra
 	
+	
+swapPlayerNames:
 
+	 swap_loop:
+
+            lb $t0, 0($a0)   
+            lb $t1, 0($a1)   
+         
+            sb $t0, 0($a1) 
+            sb $t1, 0($a0) 
+
+            
+            beq $t0, $zero, swap_done # check if the current character is null (end of string)
+
+  
+            addi $a0, $a0, 1   
+            addi $a1, $a1, 1
+            
+            j swap_loop
+
+	swap_done:
+	
+	jr $ra
