@@ -28,8 +28,10 @@ CHOOSESIDEOP: .asciiz "0.Top\n1.Bottom\n"
 
 #PlayPrints
 CHOOSEHOUSE: .asciiz "choose a house => "
-GAMEEND: .asciiz "Game Finished"
+GAMEEND: .asciiz "Game Finished\n"
 EMPTYHOUSE: .asciiz "The selected house is empty!\n"
+PLAYERWON: .asciiz "Winner: "
+PLAYERDRAW: .asciiz "Draw\n"
 TEST: .asciiz "TEST"
 
 #Tutorial
@@ -44,8 +46,8 @@ player2: .space 20
 
 
 	.align 2
-CASASTOP: 	.word		4, 0, 4, 4, 4, 4, 0  #Careful with the first element, i need to verify if im in the first so i jump over that one
-CASASBOTTOM: .word		4, 0, 4, 4, 4, 4, 0  #Careful with the last element, i need to verify if im in the last so i jump over that one
+CASASTOP: 	.word		4, 4, 2, 1, 1, 1, 2  #Careful with the first element, i need to verify if im in the first so i jump over that one
+CASASBOTTOM: .word		4, 4, 4, 4, 4, 2, 20  #Careful with the last element, i need to verify if im in the last so i jump over that one
 
 	
 
@@ -193,8 +195,6 @@ PlayGame:
 	
 	jal start
 	
-	
-	
 	lw $ra, 0($sp)
 	addi $sp, $sp, 4
 	
@@ -209,23 +209,59 @@ start: #Game loop
 	startGame:
 		beq $s7, 3, gameFinished
 		
+		jal clear
+		
 		jal printBoard
 		
 		add $a0, $s7, $0
 		jal playerMove #player move, print board after
-
-
-
+		
+		beq $v0, 3, endStartGame
+		j continueStartGame
+		
+		endStartGame:
+		add $s7, $v0, $0
+		 
+		continueStartGame:
+		
 		j startGame
 
 	gameFinished:
-		 
+	
+	 
 		la $a0, GAMEEND
 		jal printf
 		
+		la $a0, PLAYERWON
+		jal printf
+		
+		beq $v1, 1, bottomWins 
+		beq $v1, 2, topWins 
+		beq $v1, 3, drawwWin
+		
+		bottomWins:
+			la $a0, player1
+			jal printf
+			j wins
+		topWins:
+			la $a0, player2
+			jal printf
+			j wins
+		drawwWin:
+			la $a0, PLAYERDRAW
+			jal printf
+		
+		wins:
+		
+		jal printBoard 
+		 
+		 
+		
+		addi $v0, $0, 10
+		syscall
+		
 		lw $ra, 0($sp)
 		addi $sp, $sp, 4
-	
 		jr $ra
 	
 			
@@ -250,25 +286,34 @@ playerMove: #Player move
 		
 		jumpReadMove:
 		jal readMove # 1-6 checker
-		add $s4, $v0, $0
+		add $s4, $v0, $0 # chosen house
 		
-		add $a0, $v0, $0
-		add $a1, $s3, $0
+		add $a0, $v0, $0 # sending chosen house to check
+		add $a1, $s3, $0 # sending 1, used to check correct vector
 		jal emptyHouse # if the choosen house is empty, $v0 is 1
 		
-		beq $v0, 1, jumpReadMove
+		beq $v0, 1, jumpReadMove # house was empty
 		
 		add $a0, $s4, $0
 		addi $a1, $0, 1
 		jal moveMaker
 		
+		beq $v0, 0, verifyHarvestTop #Means that ended on a bottom house, enemy side of the table
+		j notHarvestingTop
+		
+		verifyHarvestTop:
+			add $a0, $v0, $0 # Adds 0
+			add $a1, $v1, $0 # Adds the offset
+			jal verifyHarvest
+		notHarvestingTop:
 		
 		#v0 recives
 		
 		#logic
-		
 		add $s7, $0, $0 #check if anyone wins before this
 		
+		jal checkWin
+		beq $v0, 3, end3Game
 		
 		j moveEnd
 		
@@ -281,25 +326,44 @@ playerMove: #Player move
 		la $a0, CHOOSEHOUSE
 		jal printf
 		
-		jumpReadMove1:
+		 jumpReadMove1:
 		jal readMove
-		add $s4, $v0, $0
+		add $s4, $v0, $0 # chosen house
 		
-		add $a0, $v0, $0
-		add $a1, $s3, $0
+		add $a0, $v0, $0 # sending chosen house
+		add $a1, $s3, $0 # sending 0, used to check correct vector
 		jal emptyHouse
 		
-		beq $v0, 1, jumpReadMove1
+		beq $v0, 1, jumpReadMove1 # house was empty
 		
-		add $a0, $s4, $0
-		add $a1, $0, $0
-		jal moveMaker
+		add $a0, $s4, $0  
+		addi $a1, $0, 0 # starting in top
+		jal moveMaker # plants seeds
+		
+		beq $v0, 1, verifyHarvestBottom #Means that ended on a bottom house, enemy side of the table
+		j notHarvestingBottom	
+		
+		verifyHarvestBottom:
+			add $a0, $v0, $0 # Adds 1
+			add $a1, $v1, $0 # Adds the offset
+			jal verifyHarvest
+		notHarvestingBottom:
 		
 		#logic
 		
 		addi $s7, $0, 1 #check if anyone wins before this
 		
+		jal checkWin
+		beq $v0, 3, end3Game
+		
 	moveEnd:
+	
+	j continueGame
+	
+	 end3Game:
+	 	add $v0, $v0, $0
+		add $v1, $v1, $0 # 1 - player 1, 2 - player 2, 3 - draw
+	continueGame:
 	
 	lw $s4, 8($sp)
 	lw $s3, 4($sp)
@@ -615,7 +679,7 @@ boardMid:
 		sw $ra,  0($sp)
 
 
-		lw $t2,  24($s1)
+		lw $t2,  24($s0)
 						
 		addi $v0, $0, 1
         		add $a0, $t2, $0
@@ -871,7 +935,7 @@ moveMaker:
 	
 	topArray:
 		la $t0, 0($s0)
-
+	
 	initSeeding:
 	addi $a0, $a0, -1
 	sll $t1, $a0, 2
@@ -883,10 +947,11 @@ moveMaker:
 	
 	sll $s4,  $a0, 2
 	
-	beq $a1, 0, switchPlantSide
-
+	beq $a1, 0, switchPlantSide # if this happens, im on top side
+	
+	
 	plantSeeds:
-		beq $s3, $0, endPlant
+		beq $s3, $0, endPlantBottom
 		beq $s4, 20, switchPlantSideFilter
 		
 		la $s5, 0($s1)
@@ -896,7 +961,7 @@ moveMaker:
 		lw $t1, 0($t2)
 		
 		addi $t1, $t1, 1
-		sw $t1, 0($t2) #Updated
+		sw $t1, 0($t2) # updated
 		
 		addi $s3, $s3, -1
 		
@@ -906,7 +971,7 @@ moveMaker:
 		addi $s4, $0, 24
 		
 	switchPlantSide:	
-		beq $s3, $0, endPlant
+		beq $s3, $0, endPlantTop
 		beq $s4, 0 , reswitchPlantSide
 		
 		la $s5, 0($s0)
@@ -926,6 +991,15 @@ moveMaker:
 		addi $s4, $0, -4
 		j plantSeeds
 	
+	endPlantBottom:
+		addi $v0, $0, 1 #If it ends on bottom, return 1
+		add $v1, $s4, $0 # ofsett of house to check
+		j endPlant
+		
+	endPlantTop:
+		add $v0, $0, $0 #If it ends on bottom, return 0
+		add $v1, $s4, $0 # ofsett of house to check
+		
 	endPlant:
 	
 	lw $s5, 12($sp)
@@ -935,14 +1009,165 @@ moveMaker:
 	addi $sp, $sp, 16
 	jr $ra	
 	
+
+verifyHarvest:
+	addi $sp, $sp, -8
+	sw $ra, 0($sp)
+	sw $s3, 4($sp)
+	
+	add $s3, $a1, $0
+	
+	beq $v0, 1, verifyBottom
+	j verifyTop
 	
 	
+	verifyBottom: #Check if top player will get some points
+		la $t0, 0($s1)
+		
+		add $t0, $t0, $a1
+		lw $t1, 0($t0)
+		
+		beq $t1, 3, harvestBottom3
+		beq $t1, 2, harvestBottom2
+		j finishedHarvesting # Not collecting
+		
+		harvestBottom3:
+			sw $0, 0($t0)
+			la $t0, 0($s0)
+			addi $t0, $t0, 24
+			lw $t1, 0($t0)
+			addi $t1, $t1, 3
+			sw $t1, 0($t0)
+			
+			j loopHarvestBottom
+			
+		harvestBottom2:
+			sw $0, 0($t0)
+			la $t0, 0($s0)
+			addi $t0, $t0, 24
+			lw $t1, 0($t0)
+			addi $t1, $t1, 2
+			sw $t1, 0($t0)
+			
+		loopHarvestBottom:
+			la $t0, 0($s1) #ververver
+			addi $s3, $s3, -4 #ververver
+			beq $s3, -4,  finishedHarvesting #ververver
+			
+			add $t0, $t0, $s3 #offset
+			lw $t1, 0($t0) # number of seeds in pos
+
+			slti $t2, $t1, 2 # < 2
+			beq $t2, 1, finishedHarvesting
+			
+			slti $t2, $t1, 4  # > 3
+			beq $t2, $0, finishedHarvesting
+		
+			sw $0, 0($t0)
+			
+			la $t0, 0($s0)
+			lw $t2, 24($t0)
+			
+			add $t2, $t2, $t1
+			sw $t2, 24($t0)
+			
+			j loopHarvestBottom
+		
+		
+	verifyTop:
+		la $t0, 0($s0)
 	
+		add $t0, $t0, $a1
+		lw $t1, 0($t0)
+		
+		beq $t1, 3, harvestTop3
+		beq $t1, 2, harvestTop2
+		j  finishedHarvesting
 	
+		harvestTop3:
+			sw $0, 0($t0)
+			la $t0, 0($s1)
+			addi $t0, $t0, 24
+			lw $t1, 0($t0)
+			addi $t1, $t1, 3
+			sw $t1, 0($t0)
+			
+			j loopHarvestTop
+		
+		harvestTop2:
+			sw $0, 0($t0)
+			la $t0, 0($s1)
+			addi $t0, $t0, 24
+			lw $t1, 0($t0)
+			addi $t1, $t1, 2
+			sw $t1, 0($t0)
+		
+		loopHarvestTop:
+			la $t0, 0($s0)
+			add $s3, $s3, 4
+			beq $s3, 24, finishedHarvesting
+			
+			add $t0, $t0, $s3 #offset
+			lw $t1, 0($t0)
+			
+			slti $t2, $t1, 2 # < 2
+			beq $t2, 1, finishedHarvesting
+			
+			slti $t2, $t1, 4 # > 3
+			beq $t2, $0, finishedHarvesting
+		
+			sw $0, 0($t0)
+			
+			la $t0, 0($s1)
+			lw $t2, 24($t0)
+			
+			add $t2, $t2, $t1
+			sw $t2, 24($t0)
+			
+			j loopHarvestTop
+		
+	finishedHarvesting:
+	 
+	lw $ra, 0($sp)
+	lw $s3, 4($sp)
+	addi $sp, $sp, 8
+	jr $ra
 	
+checkWin:
 	
+	lw $t0, 24($s1)
+	slti $t0, $t0, 25
+	beq $t0, $0, bottomWin
 	
+	lw $t1, 24($s0)
+	slti $t1, $t1, 25
+	beq $t1, $0, topWin
 	
+	lw $t0, 24($s1)
+	beq $t0, 24, drawWin
 	
+	j endWin
 	
+	bottomWin:
+		addi $v0, $0, 3
+		addi $v1, $0, 1
+		j endWin
+	topWin:
+		addi $v0, $0, 3
+		addi $v1, $0, 2
+		j endWin
+	drawWin:
+		lw $t1, 24($s0)
+		beq $t1, 24, drawWinFinish
+		
+		j endWin
+		
+		drawWinFinish:
+		addi $v0, $0, 3
+		addi $v1, $0, 3
+		
+	endWin:
 	
+	jr $ra
+	
+
