@@ -1,6 +1,6 @@
 # MIPS Assembly - OWARE Game
 
-This repository contains the source code for an implementation of the OWARE game in MIPS Assembly. It serves as an educational project aimed at reinforcing core MIPS programming concepts through a fun, interactive application.
+This repository contains the source code for an implementation of the OWARE game in MIPS Assembly. It serves as an educational project aimed at reinforcing core MIPS programming concepts.
 
 ---
 
@@ -40,7 +40,7 @@ To run the OWARE game on your machine:
 
 ## Educational Goals
 
-This project is designed to help students practice and understand:
+This project is designed to practice and understand:
 
 - Input/output operations using syscalls  
 - Data manipulation using arithmetic and logical operations  
@@ -51,7 +51,7 @@ This project is designed to help students practice and understand:
 
 ## Customization and Exploration
 
-Students are encouraged to explore beyond the base implementation:
+I encourage to explore beyond the base implementation:
 
 - Modify board size or seed count  
 - Implement AI for single-player mode  
